@@ -1,20 +1,22 @@
 package main
 
 import (
+	"context"
 	"log"
 	tgEvent "main/client/events/telegram"
 	tgClient "main/client/telegram"
 	eConsumer "main/consumer/event_consumer"
-	"main/storage/files"
+	sqlite_storage "main/storage/sqllite"
 	"os"
 
 	"github.com/joho/godotenv"
 )
 
 const (
-	tgBotHost   = "api.telegram.org"
-	storagePath = "storage"
-	batchSize   = 100
+	tgBotHost      = "api.telegram.org"
+	storagePath    = "user_data/local"
+	storageSqlPath = "user_data/sqlite/storage.db"
+	batchSize      = 100
 )
 
 func main() {
@@ -31,7 +33,13 @@ func main() {
 	log.Print("service started")
 
 	tg_client := tgClient.New(tgBotHost, key)
-	processor := tgEvent.New(tg_client, files.New(storagePath))
+	st, err := sqlite_storage.New(storageSqlPath)
+	if err != nil {
+		log.Fatal("can't start database", err)
+	}
+	st.Init(context.Background())
+
+	processor := tgEvent.New(tg_client, st)
 	consumer := eConsumer.New(processor, processor, batchSize)
 
 	if err := consumer.Start(); err != nil {

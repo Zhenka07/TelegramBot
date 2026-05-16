@@ -6,7 +6,7 @@ import (
 	tgEvent "main/client/events/telegram"
 	tgClient "main/client/telegram"
 	eConsumer "main/consumer/event_consumer"
-	sqlite_storage "main/storage/sqllite"
+	bdStorage "main/storage/sqlite"
 	"os"
 
 	"github.com/joho/godotenv"
@@ -32,14 +32,14 @@ func main() {
 
 	log.Print("service started")
 
-	tg_client := tgClient.New(tgBotHost, key)
-	st, err := sqlite_storage.New(storageSqlPath)
+	tgClient := tgClient.New(tgBotHost, key)
+	st, err := bdStorage.New(storageSqlPath)
 	if err != nil {
 		log.Fatal("can't start database", err)
 	}
 	st.Init(context.Background())
 
-	processor := tgEvent.New(tg_client, st)
+	processor := tgEvent.New(tgClient, st)
 	consumer := eConsumer.New(processor, processor, batchSize)
 
 	if err := consumer.Start(); err != nil {

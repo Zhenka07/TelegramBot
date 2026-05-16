@@ -8,15 +8,15 @@ import (
 
 type Consumer struct {
 	Processor events.Processor
-	Fetcher   events.Fether
+	Fetcher   events.Fetcher
 	batchSize int
 }
 
-func New(processor events.Processor, fetcher events.Fether, batchSize int) Consumer {
+func New(processor events.Processor, fetcher events.Fetcher, BatchSize int) Consumer {
 	return Consumer{
 		Processor: processor,
 		Fetcher:   fetcher,
-		batchSize: batchSize,
+		batchSize: BatchSize,
 	}
 }
 

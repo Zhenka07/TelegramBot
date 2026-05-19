@@ -2,8 +2,9 @@ package eventconsumer
 
 import (
 	"log"
-	"main/client/events"
 	"time"
+
+	"github.com/Zhenka07/TelegramBot/client/events"
 )
 
 type Consumer struct {

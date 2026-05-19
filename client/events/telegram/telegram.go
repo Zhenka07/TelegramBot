@@ -1,17 +1,30 @@
 package telegram
 
 import (
+	"context"
 	"errors"
 	"fmt"
-	"main/client/events"
-	"main/client/telegram"
-	"main/storage"
+
+	"github.com/Zhenka07/TelegramBot/client/events"
+	"github.com/Zhenka07/TelegramBot/client/telegram"
+	"github.com/Zhenka07/TelegramBot/storage"
 )
+
+type Storage interface {
+	Save(ctx context.Context, p *storage.Page) error
+	PickRandom(ctx context.Context, username string) (*storage.Page, error)
+	Remove(ctx context.Context, p *storage.Page) error
+	IsExists(ctx context.Context, p *storage.Page) (bool, error)
+}
+
+type Fetcher struct {
+	tg     *telegram.Client
+	offset int
+}
 
 type Processor struct {
 	tg      *telegram.Client
-	offset  int
-	storage storage.Storage
+	storage Storage
 }
 
 var (
@@ -24,11 +37,15 @@ type Meta struct {
 	Username string
 }
 
-func New(client *telegram.Client, storage storage.Storage) *Processor {
-	return &Processor{
+func New(client *telegram.Client, storage Storage) (*Processor, *Fetcher) {
+	pr := &Processor{
 		tg:      client,
 		storage: storage,
 	}
+	ft := &Fetcher{
+		tg: client,
+	}
+	return pr, ft
 }
 
 func (p *Processor) Process(event events.Event) error {
@@ -60,7 +77,24 @@ func GetMeta(event events.Event) (Meta, error) {
 	return res, nil
 }
 
-func (p *Processor) Fetch(limit int) ([]events.Event, error) {
+func Event(upd telegram.Update) events.Event {
+	upd_type := FetchType(upd)
+	res := events.Event{
+		Type: upd_type,
+		Text: FetchText(upd),
+	}
+
+	if upd_type == events.Message {
+		res.Meta = Meta{
+			ChatID:   upd.Message.Chat.ID,
+			Username: upd.Message.User.Username,
+		}
+	}
+
+	return res
+}
+
+func (p *Fetcher) Fetch(limit int) ([]events.Event, error) {
 	updates, err := p.tg.Updates(p.offset, limit)
 	if err != nil {
 		return nil, fmt.Errorf("Can't get updates %w", err)
@@ -81,23 +115,6 @@ func (p *Processor) Fetch(limit int) ([]events.Event, error) {
 	return res, nil
 }
 
-func Event(upd telegram.Update) events.Event {
-	upd_type := FetchType(upd)
-	res := events.Event{
-		Type: upd_type,
-		Text: FetchText(upd),
-	}
-
-	if upd_type == events.Message {
-		res.Meta = Meta{
-			ChatID:   upd.Message.Chat.ID,
-			Username: upd.Message.User.Username,
-		}
-	}
-
-	return res
-}
-
 func FetchType(upd telegram.Update) events.Type {
 	if upd.Message == nil {
 		return events.Unknown
@@ -109,8 +126,5 @@ func FetchText(upd telegram.Update) string {
 	if upd.Message == nil {
 		return ""
 	}
-	if upd.Message.Text != "" {
-		return upd.Message.Text
-	}
-	return ""
+	return upd.Message.Text
 }

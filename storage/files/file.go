@@ -1,14 +1,16 @@
 package files
 
 import (
+	"context"
 	"encoding/gob"
 	"errors"
 	"fmt"
-	"main/storage"
 	"math/rand"
 	"os"
 	"path/filepath"
 	"time"
+
+	"github.com/Zhenka07/TelegramBot/storage"
 )
 
 type Storage struct {
@@ -21,7 +23,7 @@ func New(path string) Storage {
 
 const DefaultPermission = 0774
 
-func (s Storage) Save(page *storage.Page) error {
+func (s Storage) Save(ctx context.Context, page *storage.Page) error {
 	filePath := filepath.Join(s.basePath, page.UserName)
 	if err := os.MkdirAll(filePath, DefaultPermission); err != nil {
 		return fmt.Errorf("Can't create directory %w", err)
@@ -46,7 +48,7 @@ func (s Storage) Save(page *storage.Page) error {
 	return nil
 }
 
-func (s Storage) PickRandom(username string) (*storage.Page, error) {
+func (s Storage) PickRandom(ctx context.Context, username string) (*storage.Page, error) {
 	filePath := filepath.Join(s.basePath, username)
 
 	files, err := os.ReadDir(filePath)
@@ -79,7 +81,7 @@ func (s Storage) PickRandom(username string) (*storage.Page, error) {
 	return &p, nil
 }
 
-func (s Storage) Remove(p *storage.Page) error {
+func (s Storage) Remove(ctx context.Context, p *storage.Page) error {
 	fileName, err := FileName(p)
 	if err != nil {
 		return fmt.Errorf("Can't create filename %w", err)
@@ -92,7 +94,7 @@ func (s Storage) Remove(p *storage.Page) error {
 	return nil
 }
 
-func (s Storage) IsExists(p *storage.Page) (bool, error) {
+func (s Storage) IsExists(ctx context.Context, p *storage.Page) (bool, error) {
 	fileName, err := FileName(p)
 	if err != nil {
 		return false, fmt.Errorf("Can't create filename %w", err)

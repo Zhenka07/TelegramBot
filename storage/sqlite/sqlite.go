@@ -4,8 +4,8 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
-	"main/storage"
 
+	"github.com/Zhenka07/TelegramBot/storage"
 	_ "github.com/mattn/go-sqlite3"
 )
 

@@ -1,4 +1,4 @@
-module main
+module github.com/Zhenka07/TelegramBot
 
 go 1.22.2
 

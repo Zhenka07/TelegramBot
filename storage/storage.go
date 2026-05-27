@@ -1,7 +1,6 @@
 package storage
 
 import (
-	"context"
 	"crypto/sha1"
 	"errors"
 	"fmt"
@@ -9,13 +8,6 @@ import (
 )
 
 var ErrNoSavedPage = errors.New("You don't have saved page")
-
-type Storage interface {
-	Save(ctx context.Context, p *Page) error
-	PickRandom(ctx context.Context, username string) (*Page, error)
-	Remove(ctx context.Context, p *Page) error
-	IsExists(ctx context.Context, p *Page) (bool, error)
-}
 
 type Page struct {
 	URL      string
@@ -28,6 +20,8 @@ func (p Page) Hash() (string, error) {
 	if _, err := io.WriteString(h, p.UserName); err != nil {
 		return "", fmt.Errorf("Can't create hash %w", err)
 	}
+
+	h.Write([]byte{0})
 
 	if _, err := io.WriteString(h, p.URL); err != nil {
 		return "", fmt.Errorf("Can't create hash %w", err)

@@ -5,9 +5,10 @@ import (
 	"errors"
 	"fmt"
 	"log"
-	"main/storage"
 	"net/url"
 	"strings"
+
+	"github.com/Zhenka07/TelegramBot/storage"
 )
 
 const (
@@ -92,6 +93,9 @@ func IsAddCmd(text string) bool {
 }
 
 func IsURL(text string) bool {
-	url, err := url.Parse(text)
-	return err == nil && url.Host != ""
+	u, err := url.Parse(text)
+	if err != nil || u.Host == "" {
+		return false
+	}
+	return u.Scheme == "http" || u.Scheme == "https"
 }

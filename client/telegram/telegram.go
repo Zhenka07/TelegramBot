@@ -33,9 +33,9 @@ func newPath(token string) string {
 	return "bot" + token
 }
 
-func (c *Client) SendMessage(chatID int, text string) error {
+func (c *Client) SendMessage(ChatID int, text string) error {
 	q := url.Values{}
-	q.Add("chat_id", strconv.Itoa(chatID))
+	q.Add("chat_id", strconv.Itoa(ChatID))
 	q.Add("text", text)
 
 	_, err := c.DoRequest(q, sendMsg)

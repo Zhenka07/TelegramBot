@@ -12,7 +12,7 @@ import (
 )
 
 type Storage struct {
-	base_path string
+	basePath string
 }
 
 func New(path string) Storage {
@@ -22,34 +22,34 @@ func New(path string) Storage {
 const DefaultPermission = 0774
 
 func (s Storage) Save(page *storage.Page) error {
-	file_path := filepath.Join(s.base_path, page.UserName)
-	if err := os.MkdirAll(file_path, DefaultPermission); err != nil {
+	filePath := filepath.Join(s.basePath, page.UserName)
+	if err := os.MkdirAll(filePath, DefaultPermission); err != nil {
 		return fmt.Errorf("Can't create directory %w", err)
 	}
 
-	file_name, err := FileName(page)
+	filename, err := FileName(page)
 	if err != nil {
 		return fmt.Errorf("Can't create filename %w", err)
 	}
 
-	file_path = filepath.Join(file_path, file_name)
+	filePath = filepath.Join(filePath, filename)
 
-	file, err := os.Create(file_path)
+	file, err := os.Create(filePath)
 	if err != nil {
 		return fmt.Errorf("Can't create file %w", err)
 	}
+	defer file.Close()
 
 	if err := gob.NewEncoder(file).Encode(page); err != nil {
 		return fmt.Errorf("Can't convert file to gob %w", err)
 	}
-	file.Close()
 	return nil
 }
 
-func (s Storage) PickRandom(user_name string) (*storage.Page, error) {
-	file_path := filepath.Join(s.base_path, user_name)
+func (s Storage) PickRandom(username string) (*storage.Page, error) {
+	filePath := filepath.Join(s.basePath, username)
 
-	files, err := os.ReadDir(file_path)
+	files, err := os.ReadDir(filePath)
 	if err != nil {
 		return nil, fmt.Errorf("Can't read directory %w", err)
 	}
@@ -62,43 +62,43 @@ func (s Storage) PickRandom(user_name string) (*storage.Page, error) {
 
 	file := files[n]
 
-	filename := filepath.Join(file_path, file.Name())
+	filename := filepath.Join(filePath, file.Name())
 
-	raw_bits, err := os.Open(filename)
+	rawBits, err := os.Open(filename)
 	if err != nil {
 		return nil, fmt.Errorf("Can't open this file %w", err)
 	}
+	defer rawBits.Close()
 
 	var p storage.Page
 
-	if err := gob.NewDecoder(raw_bits).Decode(&p); err != nil {
+	if err := gob.NewDecoder(rawBits).Decode(&p); err != nil {
 		return nil, fmt.Errorf("Can't open decode file %w", err)
 	}
-	raw_bits.Close()
 
 	return &p, nil
 }
 
 func (s Storage) Remove(p *storage.Page) error {
-	file_name, err := FileName(p)
+	fileName, err := FileName(p)
 	if err != nil {
 		return fmt.Errorf("Can't create filename %w", err)
 	}
-	path := filepath.Join(s.base_path, p.UserName, file_name)
+	path := filepath.Join(s.basePath, p.UserName, fileName)
 	if err := os.Remove(path); err != nil {
-		msg := fmt.Sprintf("can't delete file %s %w", file_name, err)
-		return fmt.Errorf(msg)
+		msg := fmt.Sprintf("can't delete file %s", fileName)
+		return fmt.Errorf(msg+"%w", err)
 	}
 	return nil
 }
 
 func (s Storage) IsExists(p *storage.Page) (bool, error) {
-	file_name, err := FileName(p)
+	fileName, err := FileName(p)
 	if err != nil {
 		return false, fmt.Errorf("Can't create filename %w", err)
 	}
 
-	path := filepath.Join(s.base_path, p.UserName, file_name)
+	path := filepath.Join(s.basePath, p.UserName, fileName)
 
 	_, err = os.Stat(path)
 	if errors.Is(err, os.ErrNotExist) {

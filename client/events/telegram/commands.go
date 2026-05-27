@@ -38,60 +38,60 @@ func (p *Processor) doCmd(text string, ChatID int, username string) error {
 
 }
 
-func (p *Processor) AddPage(ChatId int, page_url string, username string) error {
+func (p *Processor) AddPage(ChatID int, PageUrl string, username string) error {
 	page := &storage.Page{
-		URL:      page_url,
+		URL:      PageUrl,
 		UserName: username,
 	}
 
-	is_exists, err := p.storage.IsExists(page, context.Background())
+	isExists, err := p.storage.IsExists(context.Background(), page)
 	if err != nil {
 		return fmt.Errorf("Can't save this page %w", err)
 	}
 
-	if is_exists {
-		return p.tg.SendMessage(ChatId, msgAlreadyExists)
+	if isExists {
+		return p.tg.SendMessage(ChatID, msgAlreadyExists)
 	}
 
-	if err := p.storage.Save(page, context.Background()); err != nil {
+	if err := p.storage.Save(context.Background(), page); err != nil {
 		return fmt.Errorf("Can't save this page %w", err)
 	}
 
-	if err := p.tg.SendMessage(ChatId, msgSaved); err != nil {
+	if err := p.tg.SendMessage(ChatID, msgSaved); err != nil {
 		return fmt.Errorf("Can't save this page %w", err)
 	}
 	return nil
 }
 
-func (p *Processor) SendRandom(chatId int, username string) error {
-	page, err := p.storage.PickRandom(username, context.Background())
+func (p *Processor) SendRandom(ChatId int, username string) error {
+	page, err := p.storage.PickRandom(context.Background(), username)
 	if err != nil && !errors.Is(err, storage.ErrNoSavedPage) {
 		return fmt.Errorf("Can't send random page %w", err)
 	}
 	if errors.Is(err, storage.ErrNoSavedPage) {
-		return p.tg.SendMessage(chatId, msgNoSavedPages)
+		return p.tg.SendMessage(ChatId, msgNoSavedPages)
 	}
 
-	if err := p.tg.SendMessage(chatId, page.URL); err != nil {
+	if err := p.tg.SendMessage(ChatId, page.URL); err != nil {
 		return fmt.Errorf("Can't send random page %w", err)
 	}
 
-	return p.storage.Remove(page, context.Background())
+	return p.storage.Remove(context.Background(), page)
 }
 
-func (p *Processor) SendHelp(chatId int) error {
-	return p.tg.SendMessage(chatId, msgHelp)
+func (p *Processor) SendHelp(ChatId int) error {
+	return p.tg.SendMessage(ChatId, msgHelp)
 }
 
-func (p *Processor) SendHello(chatId int) error {
-	return p.tg.SendMessage(chatId, msgHello)
+func (p *Processor) SendHello(ChatId int) error {
+	return p.tg.SendMessage(ChatId, msgHello)
 }
 
 func IsAddCmd(text string) bool {
-	return IsUrl(text)
+	return IsURL(text)
 }
 
-func IsUrl(text string) bool {
+func IsURL(text string) bool {
 	url, err := url.Parse(text)
 	return err == nil && url.Host != ""
 }

@@ -36,7 +36,7 @@ func (p *Processor) Process(event events.Event) error {
 	case events.Message:
 		return p.ProcessMessage(event)
 	default:
-		return fmt.Errorf("Can't process this event", ErrUnknownEventType)
+		return fmt.Errorf("Can't process this event %w", ErrUnknownEventType)
 	}
 }
 
@@ -55,7 +55,7 @@ func (p *Processor) ProcessMessage(event events.Event) error {
 func GetMeta(event events.Event) (Meta, error) {
 	res, good := event.Meta.(Meta)
 	if !good {
-		return Meta{}, fmt.Errorf("Can't find the meta", ErrUnknownMeta)
+		return Meta{}, fmt.Errorf("Can't find the meta %w", ErrUnknownMeta)
 	}
 	return res, nil
 }

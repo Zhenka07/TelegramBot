@@ -1,7 +1,5 @@
 /user_data
 
-*.sum
-
 bot_app
 
 .env

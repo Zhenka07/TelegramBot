@@ -1,6 +1,7 @@
 package eventconsumer
 
 import (
+	"context"
 	"log"
 	"time"
 
@@ -21,16 +22,27 @@ func New(processor events.Processor, fetcher events.Fetcher, BatchSize int) Cons
 	}
 }
 
-func (c Consumer) Start() error {
+func (c Consumer) Start(ctx context.Context) error {
 	for {
+		select {
+		case <-ctx.Done():
+			log.Println("consumer stopped by context")
+			return nil
+		default:
+		}
+
 		events, err := c.Fetcher.Fetch(c.batchSize)
 		if err != nil {
-			log.Printf("[ERROR] consumer: ", err.Error())
+			log.Printf("[ERROR] consumer: %v", err)
 			continue
 		}
 
 		if len(events) == 0 {
-			time.Sleep(1 * time.Second)
+			select {
+			case <-ctx.Done():
+				return nil
+			case <-time.After(1 * time.Second):
+			}
 			continue
 		}
 
@@ -38,7 +50,6 @@ func (c Consumer) Start() error {
 			log.Println(err)
 			continue
 		}
-
 	}
 }
 

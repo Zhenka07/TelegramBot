@@ -3,6 +3,9 @@ package main
 import (
 	"context"
 	"log"
+	"os"
+	"os/signal"
+	"syscall"
 
 	tgEvent "github.com/Zhenka07/TelegramBot/client/events/telegram"
 	tgClient "github.com/Zhenka07/TelegramBot/client/telegram"
@@ -14,31 +17,44 @@ import (
 )
 
 func main() {
-
-	err := godotenv.Load()
-	if err != nil {
-		log.Fatal("Error loading .env file")
+	if err := godotenv.Load(); err != nil {
+		log.Println("Note: .env file not found, using system environment variables")
 	}
 
-	config, err := config.LoadConfig()
+	cfg, err := config.LoadConfig()
 	if err != nil {
-		log.Fatal("Error in config file %w", err)
+		log.Fatalf("Error in config: %v", err)
 	}
+
+	log.Print("service starting...")
+
+	tgClient := tgClient.New(cfg.TelegramHost, cfg.TelegramAPIKey)
+
+	st, err := bdStorage.New(cfg.SQLitePath)
+	if err != nil {
+		log.Fatalf("can't start database: %v", err)
+	}
+	defer func() {
+		if err := st.Close(); err != nil {
+			log.Printf("error closing database: %v", err)
+		}
+	}()
+
+	if err := st.Init(context.Background()); err != nil {
+		log.Fatalf("can't init database: %v", err)
+	}
+
+	processor, fetcher := tgEvent.New(tgClient, st)
+	consumer := eConsumer.New(processor, fetcher, cfg.BatchSize)
+
+	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
+	defer stop()
 
 	log.Print("service started")
 
-	tgClient := tgClient.New(config.TelegramHost, config.TelegramAPIKey)
-
-	st, err := bdStorage.New(config.SQLitePath)
-	if err != nil {
-		log.Fatal("can't start database", err)
+	if err := consumer.Start(ctx); err != nil {
+		log.Fatalf("service stopped with error: %v", err)
 	}
-	st.Init(context.Background())
 
-	processor, fetcher := tgEvent.New(tgClient, st)
-	consumer := eConsumer.New(processor, fetcher, config.BatchSize)
-
-	if err := consumer.Start(); err != nil {
-		log.Fatal("service is stopped", err)
-	}
+	log.Print("service stopped gracefully")
 }

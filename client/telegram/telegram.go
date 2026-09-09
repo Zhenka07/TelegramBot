@@ -8,6 +8,7 @@ import (
 	"net/url"
 	"path"
 	"strconv"
+	"time"
 )
 
 type Client struct {
@@ -23,9 +24,11 @@ const (
 
 func New(host string, token string) *Client {
 	return &Client{
-		host:   host,
-		Path:   newPath(token),
-		client: http.Client{},
+		host: host,
+		Path: newPath(token),
+		client: http.Client{
+			Timeout: 30 * time.Second,
+		},
 	}
 }
 

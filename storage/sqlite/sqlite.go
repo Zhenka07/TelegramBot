@@ -4,6 +4,8 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
+	"os"
+	"path/filepath"
 
 	"github.com/Zhenka07/TelegramBot/storage"
 	_ "github.com/mattn/go-sqlite3"
@@ -14,6 +16,12 @@ type Storage struct {
 }
 
 func New(path string) (*Storage, error) {
+	if dir := filepath.Dir(path); dir != "" && dir != "." {
+		if err := os.MkdirAll(dir, 0755); err != nil {
+			return nil, fmt.Errorf("can't create database directory %w", err)
+		}
+	}
+
 	db, err := sql.Open("sqlite3", path)
 	if err != nil {
 		return nil, fmt.Errorf("can't open database %w", err)
@@ -22,6 +30,13 @@ func New(path string) (*Storage, error) {
 		return nil, fmt.Errorf("can't connect to database %w", err)
 	}
 	return &Storage{db: db}, nil
+}
+
+func (s *Storage) Close() error {
+	if s.db != nil {
+		return s.db.Close()
+	}
+	return nil
 }
 
 func (s *Storage) Save(ctx context.Context, p *storage.Page) error {

@@ -18,7 +18,7 @@ type Config struct {
 func LoadConfig() (*Config, error) {
 	key := os.Getenv("TELEGRAM_API_KEY")
 	if key == "" {
-		return nil, fmt.Errorf("TELEGRAM_API_KEY is not set in .env")
+		return nil, fmt.Errorf("TELEGRAM_API_KEY environment variable is not set")
 	}
 
 	config := &Config{
@@ -47,7 +47,7 @@ func getEnvInt(key string, defaultVal int) int {
 	}
 
 	valInt, err := strconv.Atoi(valStr)
-	if err == nil {
+	if err != nil {
 		return defaultVal
 	}
 	return valInt

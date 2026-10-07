@@ -14,4 +14,6 @@ const (
 	msgNoSavedPages   = "You have no saved pages 🙊"
 	msgSaved          = "Saved! 👌"
 	msgAlreadyExists  = "You have already have this page in your list 🤗"
+	msgStorageError   = "Storage service is temporarily unavailable. Please try again later ⚠️"
+	msgRequestTimeout = "Request timed out. Please try again later ⏱️"
 )

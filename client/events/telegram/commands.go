@@ -7,9 +7,12 @@ import (
 	"log"
 	"net/url"
 	"strings"
+	"time"
 
 	"github.com/Zhenka07/TelegramBot/storage"
 )
+
+const defaultOperationTimeout = 5 * time.Second
 
 const (
 	RndCmd   = "/rnd"
@@ -40,44 +43,68 @@ func (p *Processor) doCmd(text string, ChatID int, username string) error {
 }
 
 func (p *Processor) AddPage(ChatID int, PageUrl string, username string) error {
+	ctx, cancel := context.WithTimeout(context.Background(), defaultOperationTimeout)
+	defer cancel()
+
 	page := &storage.Page{
 		URL:      PageUrl,
 		UserName: username,
 	}
 
-	isExists, err := p.storage.IsExists(context.Background(), page)
+	isExists, err := p.storage.IsExists(ctx, page)
 	if err != nil {
-		return fmt.Errorf("Can't save this page %w", err)
+		if errors.Is(err, context.DeadlineExceeded) || errors.Is(ctx.Err(), context.DeadlineExceeded) {
+			_ = p.tg.SendMessage(ChatID, msgRequestTimeout)
+			return fmt.Errorf("timeout checking page: %w", err)
+		}
+		_ = p.tg.SendMessage(ChatID, msgStorageError)
+		return fmt.Errorf("can't save this page: %w", err)
 	}
 
 	if isExists {
 		return p.tg.SendMessage(ChatID, msgAlreadyExists)
 	}
 
-	if err := p.storage.Save(context.Background(), page); err != nil {
-		return fmt.Errorf("Can't save this page %w", err)
+	if err := p.storage.Save(ctx, page); err != nil {
+		if errors.Is(err, context.DeadlineExceeded) || errors.Is(ctx.Err(), context.DeadlineExceeded) {
+			_ = p.tg.SendMessage(ChatID, msgRequestTimeout)
+			return fmt.Errorf("timeout saving page: %w", err)
+		}
+		_ = p.tg.SendMessage(ChatID, msgStorageError)
+		return fmt.Errorf("can't save this page: %w", err)
 	}
 
 	if err := p.tg.SendMessage(ChatID, msgSaved); err != nil {
-		return fmt.Errorf("Can't save this page %w", err)
+		return fmt.Errorf("can't send saved message: %w", err)
 	}
 	return nil
 }
 
 func (p *Processor) SendRandom(ChatId int, username string) error {
-	page, err := p.storage.PickRandom(context.Background(), username)
+	ctx, cancel := context.WithTimeout(context.Background(), defaultOperationTimeout)
+	defer cancel()
+
+	page, err := p.storage.PickRandom(ctx, username)
 	if err != nil && !errors.Is(err, storage.ErrNoSavedPage) {
-		return fmt.Errorf("Can't send random page %w", err)
+		if errors.Is(err, context.DeadlineExceeded) || errors.Is(ctx.Err(), context.DeadlineExceeded) {
+			_ = p.tg.SendMessage(ChatId, msgRequestTimeout)
+			return fmt.Errorf("timeout picking random page: %w", err)
+		}
+		_ = p.tg.SendMessage(ChatId, msgStorageError)
+		return fmt.Errorf("can't send random page: %w", err)
 	}
 	if errors.Is(err, storage.ErrNoSavedPage) {
 		return p.tg.SendMessage(ChatId, msgNoSavedPages)
 	}
 
 	if err := p.tg.SendMessage(ChatId, page.URL); err != nil {
-		return fmt.Errorf("Can't send random page %w", err)
+		return fmt.Errorf("can't send random page: %w", err)
 	}
 
-	return p.storage.Remove(context.Background(), page)
+	if err := p.storage.Remove(ctx, page); err != nil {
+		log.Printf("warning: can't remove page after sending: %v", err)
+	}
+	return nil
 }
 
 func (p *Processor) SendHelp(ChatId int) error {

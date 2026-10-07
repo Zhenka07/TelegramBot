@@ -92,10 +92,48 @@ func IsAddCmd(text string) bool {
 	return IsURL(text)
 }
 
-func IsURL(text string) bool {
-	u, err := url.Parse(text)
-	if err != nil || u.Host == "" {
-		return false
+var (
+	ErrURLTooLong    = errors.New("url is too long (max 2048 characters)")
+	ErrInvalidScheme = errors.New("url scheme must be http or https")
+	ErrInvalidHost   = errors.New("url host is invalid or missing")
+	ErrForbiddenHost = errors.New("access to local/private hosts is forbidden")
+)
+
+func ValidateURL(rawURL string) error {
+	rawURL = strings.TrimSpace(rawURL)
+	if len(rawURL) > 2048 {
+		return ErrURLTooLong
 	}
-	return u.Scheme == "http" || u.Scheme == "https"
+
+	u, err := url.Parse(rawURL)
+	if err != nil {
+		return ErrInvalidHost
+	}
+
+	if u.Scheme != "http" && u.Scheme != "https" {
+		return ErrInvalidScheme
+	}
+
+	hostname := u.Hostname()
+	if hostname == "" {
+		return ErrInvalidHost
+	}
+
+	forbidden := map[string]bool{
+		"localhost": true,
+		"127.0.0.1": true,
+		"0.0.0.0":   true,
+		"::1":       true,
+	}
+	if forbidden[strings.ToLower(hostname)] {
+		return ErrForbiddenHost
+	}
+
+	return nil
 }
+
+func IsURL(text string) bool {
+	return ValidateURL(text) == nil
+}
+
+
